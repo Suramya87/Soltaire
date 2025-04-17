@@ -21,7 +21,25 @@ function Card:draw()
 end
 
 function Card:contains(x, y)
-    return x >= self.x and x <= self.x + self.width and y >= self.y and y <= self.y + self.height
+    return x >= self.x and x <= self.x + self.width and
+           y >= self.y and y <= self.y + self.height
+end
+
+function Card:getColor()
+    if self.suit == "card_hearts_" or self.suit == "card_diamonds_" then
+        return "red"
+    else
+        return "black"
+    end
+end
+
+function Card:getValue()
+    local values = {
+        A = 1, ["02"] = 2, ["03"] = 3, ["04"] = 4,
+        ["05"] = 5, ["06"] = 6, ["07"] = 7, ["08"] = 8,
+        ["09"] = 9, ["10"] = 10, J = 11, Q = 12, K = 13
+    }
+    return values[self.rank]
 end
 
 return Card

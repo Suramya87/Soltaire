@@ -1,5 +1,7 @@
 local Game = require("game")
 --require "game"
+
+io.stdout:setvbuf("no")
 function love.load()
     love.window.setTitle("Klondike Solitaire")
     love.window.setMode(1024, 768)
@@ -17,4 +19,8 @@ end
 
 function love.mousepressed(x, y, button)
     Game:mousepressed(x, y, button)
+end
+
+function love.mousereleased(x, y, button)
+    Game:mousereleased(x, y, button)
 end
