@@ -1,25 +1,82 @@
 local Pile = {}
 Pile.__index = Pile
 
-function Pile:new(x, y)
-    local self = setmetatable({
-        x = x, y = y,
-        cards = {}
-    }, Pile)
+function Pile:new(x, y, isFoundation)
+    local self = setmetatable({}, Pile)
+    self.x = x
+    self.y = y
+    self.cards = {}
+    self.isFoundation = isFoundation or false
     return self
 end
 
 function Pile:addCard(card)
+    local offset = self.isFoundation and 0 or 20
     card.x = self.x
-    card.y = self.y + (#self.cards * 20)
+    card.y = self.y + (#self.cards * offset)
     table.insert(self.cards, card)
 end
 
---function Pile:draw()
- --   for _, card in ipairs(self.cards) do
- --       card:draw()
- --   end
---end
+function Pile:removeCards(cards)
+    local startIndex = nil
+    for i = 1, #self.cards do
+        if self.cards[i] == cards[1] then
+            startIndex = i
+            break
+        end
+    end
+
+    if startIndex then
+        for i = #self.cards, startIndex, -1 do
+            table.remove(self.cards, i)
+        end
+    end
+end
+
+function Pile:getFaceUpCardsAt(x, y)
+    local selected = {}
+    for i = #self.cards, 1, -1 do
+        local card = self.cards[i]
+        if card.faceUp and x >= card.x and x <= card.x + 71 and y >= card.y and y <= card.y + 96 then
+            for j = i, #self.cards do
+                table.insert(selected, self.cards[j])
+            end
+            break
+        end
+    end
+    return selected
+end
+
+function Pile:isPointInside(x, y)
+    if self.isFoundation then
+        return x >= self.x and x <= self.x + 71 and y >= self.y and y <= self.y + 96
+    else
+        local lastY = self.y + (#self.cards - 1) * 20
+        return x >= self.x and x <= self.x + 71 and y >= self.y and y <= lastY + 96
+    end
+end
+
+function Pile:canAcceptToFoundation(card)
+    if not self.isFoundation then return false end
+
+    local top = self.cards[#self.cards]
+    if not top then
+        return card.rank == "A" or card.value == 1
+    else
+        return top.suit == card.suit and card.value == top.value + 1
+    end
+end
+
+function Pile:canAcceptToTableau(card)
+    if self.isFoundation then return false end
+
+    local top = self.cards[#self.cards]
+    if not top then
+        return card.value == 13 -- King
+    else
+        return top.color ~= card.color and card.value == top.value - 1
+    end
+end
 
 function Pile:draw()
     if #self.cards == 0 then
@@ -29,66 +86,10 @@ function Pile:draw()
     end
 
     for i, card in ipairs(self.cards) do
+        local offset = self.isFoundation and 0 or (i - 1) * 20
         card.x = self.x
-        card.y = self.y + (not self.isFoundation and (i - 1) * 20 or 0)
+        card.y = self.y + offset
         card:draw()
-    end
-end
-
-
-function Pile:isPointInside(x, y)
-    local lastY = self.y + (#self.cards - 1) * 20
-    return x >= self.x and x <= self.x + 71 and y >= self.y and y <= lastY + 96
-end
-
-
-function Pile:isFoundationPointInside(x, y)
-    return x >= self.x and x <= self.x + 71 and y >= self.y and y <= self.y + 96
-end
-
-
-function Pile:getFaceUpCardsAt(x, y)
-    local selected = {}
-    for i = #self.cards, 1, -1 do
-        local card = self.cards[i]
-        if card.faceUp and card:contains(x, y) then
-            for j = i, #self.cards do
-                table.insert(selected, self.cards[j])
-            end
-            return selected
-        end
-    end
-    return selected
-end
-
-function Pile:removeCards(cards)
-    for _ = 1, #cards do
-        table.remove(self.cards)
-    end
-end
-
-function Pile:canAcceptCard(card)
-    local top = self.cards[#self.cards]
-    if not top then
-        return card.rank == "K"
-    end
-    local color1 = top:getColor()
-    local color2 = card:getColor()
-    local rankOrder = {
-        A = 1, ["02"] = 2, ["03"] = 3, ["04"] = 4, ["05"] = 5, ["06"] = 6,
-        ["07"] = 7, ["08"] = 8, ["09"] = 9, ["10"] = 10, J = 11, Q = 12, K = 13
-    }
-    return color1 ~= color2 and rankOrder[card.rank] == rankOrder[top.rank] - 1
-end
-
-function Pile:canAcceptToFoundation(card)
-    if not self.isFoundation then return false end
-
-    local top = self.cards[#self.cards]
-    if not top then
-        return card.rank == 1 -- Ace
-    else
-        return card.suit == top.suit and card.rank == top.rank + 1
     end
 end
 

@@ -12,6 +12,10 @@ function Card:new(suit, rank, faceUp)
         x = 0, y = 0,
         width = 71, height = 96
     }, Card)
+
+    self.value = self:getValue()
+    self.color = self:getColor()
+
     return self
 end
 
@@ -28,7 +32,9 @@ end
 function Card:getColor()
     if self.suit == "card_hearts_" or self.suit == "card_diamonds_" then
         return "red"
+--    end
     else
+--    if self.suit == "card_clubs_" or self.suit == "card_spades_" then
         return "black"
     end
 end
