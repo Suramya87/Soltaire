@@ -17,6 +17,10 @@ function Game:load()
     -- Restart button
     self.restartButton = {x = 10, y = 10, w = 100, h = 30}
 
+    -- Undo button
+    self.undoButton = {x = 120, y = 10, w = 100, h = 30}
+    self.moveHistory = {}
+
     -- Foundation piles
     self.foundations = {}
     for i = 1, 4 do
@@ -71,6 +75,12 @@ function Game:draw()
     love.graphics.setColor(1, 1, 1)
     love.graphics.print("Restart", self.restartButton.x + 10, self.restartButton.y + 8)
 
+    -- Undo button
+    love.graphics.setColor(0.1, 0.1, 0.8)
+    love.graphics.rectangle("fill", self.undoButton.x, self.undoButton.y, self.undoButton.w, self.undoButton.h)
+    love.graphics.setColor(1, 1, 1)
+    love.graphics.print("Undo", self.undoButton.x + 25, self.undoButton.y + 8)
+
     -- Draw tableau piles
     for _, pile in ipairs(self.piles) do
         pile:draw()
@@ -96,7 +106,6 @@ function Game:draw()
     if self.heldCard then
         local mx, my = love.mouse.getPosition()
 
-        -- Highlight tableau targets
         for _, pile in ipairs(self.piles) do
             if pile:isPointInside(mx, my) and pile:canAcceptToTableau(self.heldCard) then
                 love.graphics.setColor(0, 1, 0, 0.3)
@@ -104,7 +113,6 @@ function Game:draw()
             end
         end
 
-        -- Highlight foundation targets
         for _, foundation in ipairs(self.foundations) do
             if foundation:isPointInside(mx, my) and foundation:canAcceptToFoundation(self.heldCard) then
                 love.graphics.setColor(1, 1, 0, 0.3)
@@ -114,7 +122,6 @@ function Game:draw()
 
         love.graphics.setColor(1, 1, 1, 1)
 
-        -- Draw held cards on top
         for _, card in ipairs(self.heldCards) do
             card:draw()
         end
@@ -141,6 +148,13 @@ function Game:mousepressed(x, y, button)
         if x >= self.restartButton.x and x <= self.restartButton.x + self.restartButton.w and
            y >= self.restartButton.y and y <= self.restartButton.y + self.restartButton.h then
             self:load()
+            return
+        end
+
+        -- Undo button
+        if x >= self.undoButton.x and x <= self.undoButton.x + self.undoButton.w and
+           y >= self.undoButton.y and y <= self.undoButton.y + self.undoButton.h then
+            self:undoLastMove()
             return
         end
 
@@ -176,6 +190,21 @@ function Game:mousepressed(x, y, button)
             return
         end
 
+        --allow dragging from foundation 
+        for _, foundation in ipairs(self.foundations) do
+            local topCard = foundation.cards[#foundation.cards]
+            if topCard and topCard.faceUp and topCard:contains(x, y) then
+                self.heldCard = topCard
+                self.heldCards = {topCard}
+                self.dragOffsetX = x - topCard.x
+                self.dragOffsetY = y - topCard.y
+                self.heldFromPile = foundation
+                table.remove(foundation.cards)
+                return
+            end
+        end
+
+
         -- Tableau click
         for _, pile in ipairs(self.piles) do
             local cards = pile:getFaceUpCardsAt(x, y)
@@ -202,23 +231,35 @@ function Game:mousereleased(x, y, button)
                 for _, card in ipairs(self.heldCards) do
                     pile:addCard(card)
                 end
+                table.insert(self.moveHistory, {
+                    cards = self.heldCards,
+                    from = self.heldFromPile,
+                    to = pile
+                })
                 placed = true
                 break
             end
         end
+
+        -- Drop on foundation
         if not placed then
             for _, foundation in ipairs(self.foundations) do
                 if foundation:isPointInside(x, y) and foundation:canAcceptToFoundation(self.heldCard) then
                     for _, card in ipairs(self.heldCards) do
                         table.insert(foundation.cards, card)
                     end
+                    table.insert(self.moveHistory, {
+                        cards = self.heldCards,
+                        from = self.heldFromPile,
+                        to = foundation
+                    })
                     placed = true
                     break
                 end
             end
         end
 
-        -- If drop failed, return to source
+        -- Return to original place if invalid
         if not placed then
             if self.heldFromPile == "waste" then
                 for _, card in ipairs(self.heldCards) do
@@ -231,7 +272,7 @@ function Game:mousereleased(x, y, button)
             end
         end
 
-        -- Flip next card in pile if necessary
+        -- Flip next card if needed
         if self.heldFromPile and type(self.heldFromPile) ~= "string" then
             local top = self.heldFromPile.cards[#self.heldFromPile.cards]
             if top and not top.faceUp then
@@ -242,6 +283,32 @@ function Game:mousereleased(x, y, button)
         self.heldCard = nil
         self.heldCards = {}
         self.heldFromPile = nil
+    end
+end
+
+function Game:undoLastMove()
+    local last = table.remove(self.moveHistory)
+    if not last then return end
+
+    -- Remove from destination
+    for i = #last.to.cards, 1, -1 do
+        if last.to.cards[i] == last.cards[#last.cards] then
+            for _ = 1, #last.cards do
+                table.remove(last.to.cards)
+            end
+            break
+        end
+    end
+
+    -- Return to source
+    if last.from == "waste" then
+        for _, card in ipairs(last.cards) do
+            table.insert(self.waste, card)
+        end
+    elseif last.from then
+        for _, card in ipairs(last.cards) do
+            last.from:addCard(card)
+        end
     end
 end
 

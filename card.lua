@@ -10,7 +10,7 @@ function Card:new(suit, rank, faceUp)
         image = love.graphics.newImage(imgPath),
         back = love.graphics.newImage("cards/card_back.png"),
         x = 0, y = 0,
-        width = 71, height = 96
+        width = 106, height = 144
     }, Card)
 
     self.value = self:getValue()
@@ -21,8 +21,9 @@ end
 
 function Card:draw()
     local img = self.faceUp and self.image or self.back
-    love.graphics.draw(img, self.x, self.y)
+    love.graphics.draw(img, self.x, self.y, 0, 1.5, 1.5)
 end
+
 
 function Card:contains(x, y)
     return x >= self.x and x <= self.x + self.width and
@@ -32,9 +33,7 @@ end
 function Card:getColor()
     if self.suit == "card_hearts_" or self.suit == "card_diamonds_" then
         return "red"
---    end
     else
---    if self.suit == "card_clubs_" or self.suit == "card_spades_" then
         return "black"
     end
 end

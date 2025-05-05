@@ -17,6 +17,12 @@ function Pile:addCard(card)
     table.insert(self.cards, card)
 end
 
+function Pile:addCards(cards)
+    for _, card in ipairs(cards) do
+        self:addCard(card)
+    end
+end
+
 function Pile:removeCards(cards)
     local startIndex = nil
     for i = 1, #self.cards do
@@ -33,19 +39,48 @@ function Pile:removeCards(cards)
     end
 end
 
-function Pile:getFaceUpCardsAt(x, y)
-    local selected = {}
-    for i = #self.cards, 1, -1 do
-        local card = self.cards[i]
-        if card.faceUp and x >= card.x and x <= card.x + 71 and y >= card.y and y <= card.y + 96 then
-            for j = i, #self.cards do
-                table.insert(selected, self.cards[j])
-            end
-            break
+function Pile:removeTopCards(n)
+    local removed = {}
+    for i = 1, n do
+        local card = table.remove(self.cards)
+        if card then
+            table.insert(removed, 1, card) -- insert at front to preserve order
         end
     end
+    return removed
+end
+
+function Pile:getFaceUpCardsAt(x, y)
+    local selected = {}
+
+    if not self:isPointInside(x, y) then
+        return selected
+    end
+
+    if self.isFoundation then
+        local topCard = self.cards[#self.cards]
+        if topCard and topCard.faceUp and
+           x >= topCard.x and x <= topCard.x + 71 and
+           y >= topCard.y and y <= topCard.y + 96 then
+            table.insert(selected, topCard)
+        end
+    else
+        for i = #self.cards, 1, -1 do
+            local card = self.cards[i]
+            if card.faceUp and
+               x >= card.x and x <= card.x + 71 and
+               y >= card.y and y <= card.y + 96 then
+                for j = i, #self.cards do
+                    table.insert(selected, self.cards[j])
+                end
+                break
+            end
+        end
+    end
+
     return selected
 end
+
 
 function Pile:isPointInside(x, y)
     if self.isFoundation then

@@ -1,5 +1,4 @@
 local Game = require("game")
---require "game"
 
 io.stdout:setvbuf("no")
 function love.load()
